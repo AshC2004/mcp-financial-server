@@ -13,7 +13,9 @@ async def _resolve_ticker(ticker: str) -> dict[str, Any]:
     """Resolve a ticker symbol to a company record. Raises NotFoundError."""
     client = get_supabase_client()
     try:
-        result = client.table("companies").select("*").eq("ticker", ticker.upper()).execute()
+        result = (
+            client.table("companies").select("*").eq("ticker", ticker.upper()).execute()
+        )
     except Exception as e:
         raise DatabaseError(f"Failed to look up ticker: {e}")
 
@@ -27,12 +29,22 @@ async def get_company_by_ticker_or_name(identifier: str) -> dict[str, Any]:
     client = get_supabase_client()
     try:
         # Try exact ticker match first
-        result = client.table("companies").select("*").eq("ticker", identifier.upper()).execute()
+        result = (
+            client.table("companies")
+            .select("*")
+            .eq("ticker", identifier.upper())
+            .execute()
+        )
         if result.data:
             return result.data[0]
 
         # Fall back to case-insensitive name search
-        result = client.table("companies").select("*").ilike("name", f"%{identifier}%").execute()
+        result = (
+            client.table("companies")
+            .select("*")
+            .ilike("name", f"%{identifier}%")
+            .execute()
+        )
         if result.data:
             return result.data[0] if len(result.data) == 1 else result.data
     except Exception as e:
@@ -243,8 +255,7 @@ async def screen_stocks(criteria: ScreenStocksInput) -> list[dict[str, Any]]:
             ):
                 continue
             if criteria.min_eps is not None and (
-                report.get("eps") is None
-                or float(report["eps"]) < criteria.min_eps
+                report.get("eps") is None or float(report["eps"]) < criteria.min_eps
             ):
                 continue
             if criteria.min_gross_margin is not None and (
@@ -296,7 +307,6 @@ async def get_sector_overview(sector: str) -> dict[str, Any]:
             raise NotFoundError(f"No companies found in sector '{sector}'")
 
         companies = companies_result.data
-        company_ids = [c["id"] for c in companies]
         tickers = [c["ticker"] for c in companies]
 
         # Aggregate market caps

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -111,7 +110,9 @@ async def get_financial_report(
     try:
         from src.db.queries import get_financial_reports
 
-        result = await get_financial_reports(params.ticker, params.fiscal_year, params.fiscal_quarter)
+        result = await get_financial_reports(
+            params.ticker, params.fiscal_year, params.fiscal_quarter
+        )
         from src.utils.formatters import format_tool_result
 
         return format_tool_result(result, "get_financial_report")
@@ -300,7 +301,12 @@ async def list_companies_resource() -> str:
     from src.db.client import get_supabase_client
 
     client = get_supabase_client()
-    result = client.table("companies").select("ticker, name, sector, market_cap").order("ticker").execute()
+    result = (
+        client.table("companies")
+        .select("ticker, name, sector, market_cap")
+        .order("ticker")
+        .execute()
+    )
     return json.dumps(result.data, default=str)
 
 
@@ -317,7 +323,9 @@ async def company_detail_resource(ticker: str) -> str:
     from src.db.client import get_supabase_client
 
     client = get_supabase_client()
-    company = client.table("companies").select("*").eq("ticker", ticker.upper()).execute()
+    company = (
+        client.table("companies").select("*").eq("ticker", ticker.upper()).execute()
+    )
     if not company.data:
         return json.dumps({"error": f"Company {ticker} not found"})
 

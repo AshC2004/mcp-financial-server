@@ -6,9 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 class GetCompanyProfileInput(BaseModel):
     """Input for get_company_profile tool."""
 
-    identifier: str = Field(
-        ..., description="Company ticker symbol or name to look up"
-    )
+    identifier: str = Field(..., description="Company ticker symbol or name to look up")
 
     @field_validator("identifier")
     @classmethod
