@@ -285,6 +285,99 @@ async def get_sector_overview(sector: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# MCP Resources
+# ---------------------------------------------------------------------------
+@mcp.resource(
+    "financial://companies",
+    name="All Companies",
+    description="List of all companies in the financial database with basic info.",
+    mime_type="application/json",
+)
+async def list_companies_resource() -> str:
+    """Return all companies as a resource."""
+    import json
+
+    from src.db.client import get_supabase_client
+
+    client = get_supabase_client()
+    result = client.table("companies").select("ticker, name, sector, market_cap").order("ticker").execute()
+    return json.dumps(result.data, default=str)
+
+
+@mcp.resource(
+    "financial://company/{ticker}",
+    name="Company Detail",
+    description="Full profile and latest financials for a specific company by ticker.",
+    mime_type="application/json",
+)
+async def company_detail_resource(ticker: str) -> str:
+    """Return detailed company data as a resource."""
+    import json
+
+    from src.db.client import get_supabase_client
+
+    client = get_supabase_client()
+    company = client.table("companies").select("*").eq("ticker", ticker.upper()).execute()
+    if not company.data:
+        return json.dumps({"error": f"Company {ticker} not found"})
+
+    report = (
+        client.table("financial_reports")
+        .select("*")
+        .eq("company_id", company.data[0]["id"])
+        .order("fiscal_year", desc=True)
+        .order("fiscal_quarter", desc=True)
+        .limit(1)
+        .execute()
+    )
+
+    return json.dumps(
+        {
+            "company": company.data[0],
+            "latest_report": report.data[0] if report.data else None,
+        },
+        default=str,
+    )
+
+
+# ---------------------------------------------------------------------------
+# MCP Prompt Templates
+# ---------------------------------------------------------------------------
+@mcp.prompt(
+    name="analyze_company",
+    description="Generate a comprehensive analysis prompt for a given company ticker.",
+)
+async def analyze_company_prompt(ticker: str) -> str:
+    """Prompt template: Analyze a company."""
+    return (
+        f"Please provide a comprehensive analysis of {ticker.upper()} including:\n"
+        f"1. Company profile and business overview\n"
+        f"2. Recent financial performance (revenue, earnings, margins)\n"
+        f"3. Stock price trends\n"
+        f"4. Analyst ratings and consensus target price\n"
+        f"5. Key strengths and risks\n\n"
+        f"Use the available financial data tools to gather the information."
+    )
+
+
+@mcp.prompt(
+    name="compare_companies",
+    description="Generate a comparison prompt for two companies.",
+)
+async def compare_companies_prompt(ticker1: str, ticker2: str) -> str:
+    """Prompt template: Compare two companies."""
+    return (
+        f"Please compare {ticker1.upper()} and {ticker2.upper()} on the following dimensions:\n"
+        f"1. Company profiles (sector, size, market cap)\n"
+        f"2. Financial metrics (revenue, net income, EPS, margins)\n"
+        f"3. Recent stock price performance\n"
+        f"4. Analyst sentiment and target prices\n"
+        f"5. Which company appears to be the stronger investment and why?\n\n"
+        f"Use the available financial data tools to gather the information."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 def main():
