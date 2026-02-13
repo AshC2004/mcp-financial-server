@@ -382,10 +382,16 @@ async def compare_companies_prompt(ticker1: str, ticker2: str) -> str:
 # ---------------------------------------------------------------------------
 def main():
     """Run the MCP server."""
-    transport = "stdio"
     if len(sys.argv) > 1 and sys.argv[1] == "--sse":
-        transport = "sse"
-    mcp.run(transport=transport)
+        import uvicorn
+
+        from src.middleware.rate_limiter import RateLimitMiddleware
+
+        app = mcp.sse_app()
+        app.add_middleware(RateLimitMiddleware, max_requests=60, window_seconds=60)
+        uvicorn.run(app, host="127.0.0.1", port=8000)
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
